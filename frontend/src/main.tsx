@@ -6,13 +6,21 @@ import './index.css';
 import LoginPage from './pages/loginpage';
 import RegisterPage from './pages/registerpage';
 import MainAppPage from './pages/mainapppage';
+import ProtectedRoute from './components/ProtectedRoute'; // <-- Import the lock
 
 const router = createBrowserRouter([
   {
-    path: '/',
-    element: <MainAppPage />,
+    // This is the parent route that uses our lock
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: '/',
+        element: <MainAppPage />,
+      },
+      // You can add more protected routes here later
+    ],
   },
-  { 
+  {
     path: '/login',
     element: <LoginPage />,
   },
