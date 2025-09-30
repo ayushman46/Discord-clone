@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware # <-- ADD THIS IMPORT
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -12,17 +13,39 @@ database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 
+# --- CORS MIDDLEWARE SETUP ---
+# This is the part that gives your frontend permission to talk to your backend.
+origins = [
+    "http://localhost:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allows all headers
+)
+# -----------------------------
+
 # --- Security & Hashing ---
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+import bcrypt
+
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")  # Default value for development
+ALGORITHM = os.getenv("ALGORITHM", "HS256")  # Default value for development
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def get_password_hash(password: str) -> str:
+    # Truncate and encode the password
+    pwd = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd, salt).decode()
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(
+        plain_password.encode('utf-8')[:72],
+        hashed_password.encode('utf-8')
+    )
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -40,6 +63,7 @@ def get_db():
         db.close()
 
 # --- API Endpoints ---
+# ... (the rest of your /register and /token endpoints remain exactly the same)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Discord Clone API"}
