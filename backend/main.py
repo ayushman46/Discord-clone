@@ -1,42 +1,71 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware # <-- ADD THIS IMPORT
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, timezone
 import os
+import bcrypt
 
+# Note the '..' to go up one directory to find these files
 from . import models, schemas, database
 
 database.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 
-# --- CORS MIDDLEWARE SETUP ---
-# This is the part that gives your frontend permission to talk to your backend.
+# --- CORS MIDDLEWARE ---
 origins = [
     "http://localhost:5173",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"], # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-# -----------------------------
+
+# --- Connection Manager for WebSockets (MOVED HERE) ---
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+# --- WebSocket Setup ---
+channel_managers: dict[int, ConnectionManager] = {}
+
+@app.websocket("/ws/{channel_id}")
+async def websocket_endpoint(websocket: WebSocket, channel_id: int):
+    if channel_id not in channel_managers:
+        channel_managers[channel_id] = ConnectionManager()
+    
+    manager = channel_managers[channel_id]
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.broadcast(f"Message: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast("A user has left the chat")
 
 # --- Security & Hashing ---
-import bcrypt
-
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")  # Default value for development
-ALGORITHM = os.getenv("ALGORITHM", "HS256")  # Default value for development
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 def get_password_hash(password: str) -> str:
-    # Truncate and encode the password
     pwd = password.encode('utf-8')[:72]
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd, salt).decode()
@@ -63,7 +92,6 @@ def get_db():
         db.close()
 
 # --- API Endpoints ---
-# ... (the rest of your /register and /token endpoints remain exactly the same)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Discord Clone API"}
