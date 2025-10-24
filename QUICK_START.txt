@@ -1,0 +1,59 @@
+# ⚡ Quick Start - Run Everything in 2 Commands
+
+## The Simplest Way
+
+### Step 1: Open Terminal 1 and run:
+```bash
+cd /Users/ayush/Downloads/Discord-clone/backend && PYTHONPATH=$(pwd) ./venv/bin/python3 -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### Step 2: Open Terminal 2 and run:
+```bash
+cd /Users/ayush/Downloads/Discord-clone/frontend && npm run dev
+```
+
+### Step 3: Open Browser
+```
+http://localhost:5173
+```
+
+---
+
+## That's it! You're done! 🎉
+
+Both servers are now running:
+- **Frontend**: http://localhost:5173 ← Open this in browser
+- **Backend API**: http://127.0.0.1:8000
+- **API Docs**: http://127.0.0.1:8000/docs ← See all endpoints here
+
+---
+
+## What You Can Do Now
+
+✅ Register a new account
+✅ Create servers and channels
+✅ Send messages in real-time
+✅ Upload files
+✅ See typing indicators
+✅ Chat from multiple tabs/windows
+✅ Ask the AI bot questions
+
+---
+
+## Stop Everything
+
+**Terminal 1**: Press `Ctrl+C`
+**Terminal 2**: Press `Ctrl+C`
+
+---
+
+## Need Help?
+
+Read these files:
+- `RUN_BOTH.md` - Multiple ways to run both services
+- `HOW_TO_RUN.md` - Detailed guide with troubleshooting
+- `DEPLOYMENT.md` - When ready to deploy to production
+
+---
+
+**That's all you need! Start testing! 🚀**
